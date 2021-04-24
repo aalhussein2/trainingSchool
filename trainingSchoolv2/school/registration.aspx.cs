@@ -1,4 +1,6 @@
 ﻿
+using iTextSharp.text;
+using iTextSharp.text.html.simpleparser;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -20,14 +22,12 @@ namespace trainingSchoolv2.school
                 populateGenderCombo();
                 showMember();
             }
-
         }
         public override void VerifyRenderingInServerForm(Control control)
         {
             //required to avoid the run time error "  
             //Control 'GridView1' of type 'Grid View' must be placed inside a form tag with runat=server."  
         }
-
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
             // get the values from the input form
@@ -60,7 +60,6 @@ namespace trainingSchoolv2.school
             showMember();
 
         }
-
         protected void btnUpdate_Click(object sender, EventArgs e)
         {
             // write code to update record
@@ -93,7 +92,6 @@ namespace trainingSchoolv2.school
             { lblOutput.Text = "Failed!"; }
             showMember();
         }
-
         protected void btnDelete_Click(object sender, EventArgs e)
         {
             int intMemberId = int.Parse(txtMemberId.Text);
@@ -111,12 +109,10 @@ namespace trainingSchoolv2.school
             // call to update the gridview 
             showMember();
         }
-
         protected void btnSelect_Click(object sender, EventArgs e)
         {
             showMember();
         }
-
         protected void populateGenderCombo()
         {
             CRUD myCrud = new CRUD();
@@ -127,7 +123,6 @@ namespace trainingSchoolv2.school
             ddlGender.DataSource = dr;
             ddlGender.DataBind();
         }
-
         protected void showMember()
         {
             CRUD myCrud = new CRUD();
@@ -137,7 +132,6 @@ namespace trainingSchoolv2.school
             gvMember.DataSource = dr;
             gvMember.DataBind();
         }
-
         protected void populateForm_Click(object sender, EventArgs e)
         {
             int PK = int.Parse((sender as LinkButton).CommandArgument);
@@ -174,7 +168,6 @@ namespace trainingSchoolv2.school
                 }
             }
         }
-
         protected void btnExportToExcel_Click(object sender, EventArgs e)
         {
             //https://www.c-sharpcorner.com/UploadFile/0c1bb2/export-gridview-to-excel/
@@ -183,7 +176,6 @@ namespace trainingSchoolv2.school
             // write code to export to excel
             ExportGridToExcel();
         }
-
         protected void ExportGridToExcel() // working 1
         {
             Response.Clear();
@@ -228,28 +220,29 @@ namespace trainingSchoolv2.school
             Response.Write(strwritter.ToString());
             Response.End();
         }
-        protected void ExportGridToPdf() // not working
+        protected void ExportGridToPdf()
         {
-            Response.Clear();
-            Response.Buffer = true;
-            Response.ClearContent();
-            Response.ClearHeaders();
-            Response.Charset = "";
-            string FileName = "Vithal" + DateTime.Now + ".pdf";
-            StringWriter strwritter = new StringWriter();
-            HtmlTextWriter htmltextwrtter = new HtmlTextWriter(strwritter);
-            Response.Cache.SetCacheability(HttpCacheability.NoCache);
-           // Response.ContentType = "application/vnd.ms-pdf";  // changed from excel to pdf
-            Response.ContentType = "application/pdf";
-            //  Response.AddHeader("Content-Disposition", "attachment;filename=" + FileName);
-            Response.AddHeader("content-disposition", "attachment;filename=Employees.pdf");
-            gvMember.GridLines = GridLines.Both;
-            gvMember.HeaderStyle.Font.Bold = true;
-            gvMember.RenderControl(htmltextwrtter);
-            Response.Write(strwritter.ToString());
-            Response.End();
-
-
+            using (StringWriter sw = new StringWriter())
+            {
+                using (HtmlTextWriter hw = new HtmlTextWriter(sw))
+                {
+                    gvMember.AllowPaging = false;
+                    this.showMember();
+                    gvMember.RenderControl(hw);
+                    StringReader sr = new StringReader(sw.ToString());
+                    iTextSharp.text.Document pdfDoc = new iTextSharp.text.Document(PageSize.A2, 10f, 10f, 10f, 0f);
+                    HTMLWorker htmlparser = new HTMLWorker(pdfDoc);
+                    iTextSharp.text.pdf.PdfWriter.GetInstance(pdfDoc, Response.OutputStream);
+                    pdfDoc.Open();
+                    htmlparser.Parse(sr);
+                    pdfDoc.Close();
+                    Response.ContentType = "application/pdf";
+                    Response.AddHeader("content-disposition", "attachment;filename=members_File.pdf");
+                    Response.Cache.SetCacheability(HttpCacheability.NoCache);
+                    Response.Write(pdfDoc);
+                    Response.End();
+                }
+            }
         }
 
         //public void btnExportToExcel(GridView myGv, Page Page)
@@ -289,31 +282,25 @@ namespace trainingSchoolv2.school
         //    HttpContext.Current.Response.End();
         //}
 
- 
-
         protected void btnExportToWord_Click(object sender, EventArgs e)
         {
             ExportGridToWord();  // working 2
         }
-
         protected void btnExportToPdf_Click(object sender, EventArgs e)
         {
             ExportGridToPdf();
         }
-
         protected void btnExportToExcelCls_Click(object sender, EventArgs e)
         {
             exportManager.ExportGridToExcel(gvMember);  // working 3
         }
-
         protected void btnExportToWordCls_Click(object sender, EventArgs e)
         {
             exportManager.ExportGridToWord(gvMember); // working 3
         }
-
         protected void btnExportToPdfCls_Click(object sender, EventArgs e)
         {
-
+            ExportGridToPdf();
         }
     }
 }
